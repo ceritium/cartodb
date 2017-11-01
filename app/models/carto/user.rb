@@ -64,6 +64,7 @@ class Carto::User < ActiveRecord::Base
   has_many :groups, :through => :users_group
 
   has_many :received_notifications, inverse_of: :user
+  has_many :user_tokens, through: :tables
 
   delegate [
       :database_username, :database_password, :in_database,
