@@ -360,6 +360,12 @@ CartoDB::Application.routes.draw do
     put '(/user/:user_domain)(/u/:user_domain)/api/v1/tables/:id'                     => 'tables#update', as: :api_v1_tables_update, constraints: { id: /[^\/]+/ }
     get '(/user/:user_domain)(/u/:user_domain)/api/v1/tables/:id/related_templates'   => 'templates#related_templates_by_table', as: :api_v1_tables_related_templates, constraints: { id: /[^\/]+/ }
 
+    # Table user_tokens
+    get     '(/user/:user_domain)(/u/:user_domain)/api/v1/tables/:table_id/user_tokens'     => 'user_tokens#index',   as: :api_v1_tables_user_tokens_list,    constraints: { id: /[^\/]+/ }
+    get     '(/user/:user_domain)(/u/:user_domain)/api/v1/tables/:table_id/user_tokens/:id' => 'user_tokens#show',    as: :api_v1_tables_user_tokens_show,    constraints: { id: /[^\/]+/ }
+    post    '(/user/:user_domain)(/u/:user_domain)/api/v1/tables/:table_id/user_tokens'     => 'user_tokens#create',  as: :api_v1_tables_user_tokens_create,  constraints: { table_id: /[^\/]+/ }
+    delete  '(/user/:user_domain)(/u/:user_domain)/api/v1/tables/:table_id/user_tokens/:id' => 'user_tokens#destroy', as: :api_v1_tables_user_tokens_destroy, constraints: { table_id: /[^\/]+/ }
+
     # Table columns
     get    '(/user/:user_domain)(/u/:user_domain)/api/v1/tables/:table_id/columns'     => 'columns#index',   as: :api_v1_tables_columns_index,   constraints: { table_id: /[^\/]+/ }
     get    '(/user/:user_domain)(/u/:user_domain)/api/v1/tables/:table_id/columns/:id' => 'columns#show',    as: :api_v1_tables_columns_show,    constraints: { table_id: /[^\/]+/ }
