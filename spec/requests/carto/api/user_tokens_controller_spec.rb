@@ -58,7 +58,6 @@ describe Carto::Api::UserTokensController do
         expect(response.status).to eq(200)
         expect(response.body[:user_token][:writable]).to be false
       end
-
     end
 
     it "create a write user token explicitly" do
@@ -81,5 +80,4 @@ describe Carto::Api::UserTokensController do
       }.to change(Carto::UserToken, :count).by(-1)
     end
   end
-
 end

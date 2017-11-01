@@ -7,8 +7,8 @@ module Carto
     class RecordsController < ::Api::ApplicationController
       ssl_required :show, :create, :update, :destroy
 
-      REJECT_PARAMS = %w{ format controller action row_id requestId column_id
-                          api_key table_id oauth_token oauth_token_secret api_key user_domain }.freeze
+      REJECT_PARAMS = %w{ format controller action row_id requestId column_id table_id 
+                      oauth_token oauth_token_secret user_token api_key user_domain }.freeze
 
       before_filter :set_start_time
       before_filter :load_user_table, only: [:show, :create, :update, :destroy]
@@ -70,6 +70,10 @@ module Carto
 
       protected
 
+      def authentication_strategies
+        [:user_token] + super
+      end
+
       def filtered_row
         params.reject { |k, _| REJECT_PARAMS.include?(k) }.symbolize_keys
       end
@@ -79,12 +83,37 @@ module Carto
         raise RecordNotFound unless @user_table
       end
 
+      # PRIVILEGIES
+      # I dont like very much split the methods
+      # but at the moment looks like the simplest way.
+      #
+      # `current_user` can respond_to `user_token` because
+      # the user_token warden strategy extend user
+      # with CartoDB::UserTokenDecorator
+      #
+      # CartoDB::UserTokenDecorator has the logic to know
+      # if the `user_token` belongs to the `@user_table`
+      # and if the token has read or write permissions.
+      #
+      # Looks like that Carto::Permission in conjuntion with Carto::Visualization
+      # could be useful to solve the user_token grants in a coherent way with
+      # the api_token grants but I was not able understood 
+      # how `Permission` and `Visualization` really works.
+
       def read_privileges?
-        head(401) unless current_user && @user_table.visualization.is_viewable_by_user?(current_user)
+        if current_user.respond_to?(:user_token)
+          head(401) unless current_user.can_read_table?(@user_table)
+        else
+          head(401) unless @user_table.visualization.is_viewable_by_user?(current_user)
+        end
       end
 
       def write_privileges?
-        head(401) unless current_user && @user_table.visualization.writable_by?(current_user)
+        if current_user.respond_to?(:user_token)
+          head(401) unless current_user.can_write_table?(@user_table)
+        else
+          head(401) unless @user_table.visualization.writable_by?(current_user)
+        end
       end
     end
   end

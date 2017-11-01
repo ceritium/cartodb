@@ -199,8 +199,12 @@ class ApplicationController < ActionController::Base
     is_auth ? validate_session(current_user) : not_authorized
   end
 
+  def authentication_strategies
+    [:api_key, :api_authentication]
+  end
+
   def api_authorization_required
-    authenticate!(:api_key, :api_authentication, :scope => CartoDB.extract_subdomain(request))
+    authenticate!(*authentication_strategies, :scope => CartoDB.extract_subdomain(request))
     validate_session(current_user)
   end
 
@@ -208,7 +212,7 @@ class ApplicationController < ActionController::Base
   # but doesn't breaks the request if can't authenticate
   def optional_api_authorization
     if params[:api_key].present?
-      got_auth = authenticate(:api_key, :api_authentication, :scope => CartoDB.extract_subdomain(request))
+      got_auth = authenticate(*authentication_strategies, :scope => CartoDB.extract_subdomain(request))
       validate_session(current_user) if got_auth
     end
   end

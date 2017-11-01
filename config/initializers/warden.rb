@@ -224,6 +224,44 @@ Warden::Strategies.add(:api_key) do
   end
 end
 
+
+Warden::Strategies.add(:user_token) do
+  def valid?
+    params[:user_token].present?
+  end
+
+  # We don't want to store a session and send a response cookie
+  def store?
+    false
+  end
+
+  def authenticate!
+    username = CartoDB.extract_subdomain(request)
+
+    # Like the strategy `api_key` this could be done with redis instead of use AR models,
+    # but for a first version AR is enougth until define/know the proper key names.
+    user = Carto::User.find_by_username(username)
+    if user
+      user_token = user.user_tokens.find_by_token(params[:user_token])
+      if user_token
+        user.extend(CartoDB::UserTokenDecorator)
+        user.user_token = user_token
+        success!(user)
+      else
+        fail!
+      end
+    else
+      fail!
+    end
+
+  rescue
+    # I don't like rescue everything very much,
+    # but I just follow the patter of the other stategies
+    fail!
+  end
+end
+
+
 Warden::Strategies.add(:http_header_authentication) do
   include LoginEventTrigger
 

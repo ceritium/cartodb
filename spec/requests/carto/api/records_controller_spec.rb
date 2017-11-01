@@ -22,6 +22,69 @@ describe Carto::Api::RecordsController do
 
     let(:params) { { api_key: @user.api_key, table_id: @table.name, user_domain: @user.username } }
 
+    describe "user token" do
+
+      let(:read_token) do
+        FactoryGirl.create(:carto_user_token, user_table_id: @table.id, writable: false).token
+      end
+
+      let(:write_token) do
+        FactoryGirl.create(:carto_user_token, user_table_id: @table.id, writable: true).token
+      end
+
+      let(:diferent_token) do
+        user_table = FactoryGirl.create(:carto_user_table, user_id: @user.id)
+        FactoryGirl.create(:carto_user_token, user_table_id: user_table.id, writable: false).token
+      end
+
+      let(:row_id) {
+        @table.insert_row!(
+          name: String.random(10),
+          description: String.random(50),
+          the_geom: %{\{"type":"Point","coordinates":[0.966797,55.91843]\}}
+        )
+      }
+
+      before(:each) do
+        params.delete(:api_key)
+      end
+
+      it "without api_key or user token" do
+        get_json api_v1_tables_records_show_url(params.merge(id: row_id)) do |response|
+          expect(response.status).to eq(401)
+        end
+      end
+
+      it "with user token of a different table" do
+        params.merge!(user_token: diferent_token, id: row_id)
+        get_json api_v1_tables_records_show_url(params) do |response|
+          # The controller returns 401 but later the request is redirected and then return 404
+          expect(response.status).to eq(404)
+        end
+      end
+
+      it "with read user token" do
+        params.merge!(user_token: read_token, id: row_id)
+        get_json api_v1_tables_records_show_url(params) do |response|
+          expect(response.status).to eq(200)
+
+        end
+
+        params.merge!(user_token: read_token, cartodb_id: row_id)
+        put_json api_v1_tables_record_update_url(params) do |response|
+          # The controller returns 401 but later the request is redirected and then return 404
+          expect(response.status).to eq(404)
+        end
+      end
+
+      it "with write user token" do
+        params.merge!(user_token: write_token, cartodb_id: row_id)
+        put_json api_v1_tables_record_update_url(params) do |response|
+          expect(response.status).to eq(200)
+        end
+      end
+    end
+
     it "Insert a new row and get the record" do
       payload = {
         name: "Name 123",
